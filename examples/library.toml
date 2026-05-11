@@ -1,0 +1,33 @@
+# Example library manifest.
+#
+# install_path is optional. If omitted, files install under ~/.claude/.
+install_path = "~/.claude"
+
+# Public HTTPS source pinned to a tag.
+[[sources]]
+repo    = "github.com/acme/claude-pack"
+ref     = "v1.2.0"
+include = [
+  "skills/deploy",
+  "commands/ship",
+  "hooks/pre-commit.sh",
+]
+
+# Private SSH source pinned to a sha. Per-entry override remaps a non-standard
+# repo layout into the canonical ~/.claude/skills/<name> location.
+[[sources]]
+repo = "git@github.com:acme/internal-tools"
+ref  = "9f3c2ab"
+
+[[sources.entries]]
+from = "packages/triage-skill"
+to   = "skills/triage"
+
+[[sources.entries]]
+from = "bin/oncall.md"
+to   = "commands/oncall.md"
+
+# Local source — handy while iterating on a skill before publishing it.
+[[sources]]
+path    = "~/dev/my-skills"
+include = ["skills/scratch"]
