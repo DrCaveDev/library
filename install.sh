@@ -28,6 +28,15 @@ info()  { echo -e "${GREEN}✓${NC} $*"; }
 warn()  { echo -e "${YELLOW}⚠${NC} $*"; }
 header(){ echo -e "\n${BOLD}${CYAN}── $* ──${NC}\n"; }
 
+# Read from /dev/tty so prompts work even when piped via curl | bash
+tty_read() {
+  if [[ -r /dev/tty ]]; then
+    read "$@" </dev/tty
+  else
+    read "$@"
+  fi
+}
+
 # ---------------------------------------------------------------------------
 # 1. Fetch the repo
 # ---------------------------------------------------------------------------
@@ -55,14 +64,14 @@ echo "  2) $OPT_CLAUDE   (Claude Code skill)"
 echo "  3) Custom path"
 echo ""
 
-read -rp "Choice(s): " -a CHOICES
+tty_read -rp "Choice(s): " -a CHOICES
 
 for choice in "${CHOICES[@]}"; do
   case "$choice" in
     1) DEST_DIRS+=("$OPT_PI") ;;
     2) DEST_DIRS+=("$OPT_CLAUDE") ;;
     3)
-      read -rp "  Enter custom install path: " custom_path
+      tty_read -rp "  Enter custom install path: " custom_path
       if [[ -n "$custom_path" ]]; then
         # Expand ~ if present
         DEST_DIRS+=("${custom_path/#\~/$HOME}")
@@ -95,7 +104,7 @@ for dest in "${DEST_DIRS[@]}"; do
 
   if [[ -d "$dest" ]]; then
     echo "  Destination exists: $dest"
-    read -rp "  [o]verwrite / [s]kip: " overwrite_choice
+    tty_read -rp "  [o]verwrite / [s]kip: " overwrite_choice
     case "$overwrite_choice" in
       o|O)
         rm -rf "$dest"
