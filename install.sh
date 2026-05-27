@@ -54,7 +54,7 @@ DEST_DIRS=()
 
 # Pre-defined options
 OPT_PI="~/.pi/agent/skills/library"
-OPT_CLAUDE="~/.claude/library"
+OPT_CLAUDE="~/.claude/skills/library"
 
 echo "Enter the numbers of the locations to install to (space-separated),"
 echo "or enter a custom path."
