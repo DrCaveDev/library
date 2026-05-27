@@ -1,6 +1,6 @@
 ---
 name: library
-description: Install and manage a library of skills, commands, hooks, and other Claude Code extensions (SCHE) declared in a TOML manifest. Use when the user asks to install a library file, add a source/entry to a library manifest, or validate a manifest. Sources can be git repos (HTTPS or SSH) at a tag/branch/sha, or local paths.
+description: Install and manage a library of skills, commands, hooks, and other Claude Code extensions (SCHE) declared in a TOML manifest. Use when the user asks to install/add/validate library entries, discover what's available across their sources, or upgrade installed items (including the library skill itself). Sources can be git repos (HTTPS or SSH) at a tag/branch/sha, or local paths.
 ---
 
 # library
@@ -66,12 +66,69 @@ python3 scripts/library.py add [--file FILE] (--repo URL --ref REF | --path DIR)
 
 Appends a new `[[sources]]` block (and any `[[sources.entries]]`) to the manifest. Existing content and comments above the appended block are preserved verbatim.
 
+### discover
+
+```
+python3 scripts/library.py discover [KEYWORD ...]
+```
+
+Enumerates SCHE across every source in the manifest (full shallow clones for repo sources) and the user's `install_path`. Items are grouped by kind and tagged:
+
+- `[installed]`  — present locally, source content matches what's installed
+- `[updatable]`  — installed but the source has a newer/different version
+- `[available]`  — provided by a source but not installed
+- `[local]`      — present in `install_path` but no source provides it
+
+`KEYWORD` arguments filter by name and (where present) the `description:` frontmatter line.
+
+### upgrade
+
+Two phases. First stage, then review, then apply.
+
+```
+python3 scripts/library.py upgrade [NAME ...]          # phase 1: stage
+python3 scripts/library.py upgrade --apply             # phase 2: apply staged
+```
+
+Phase 1 resolves the newest semver tag (falling back to default-branch HEAD) for each repo source, fetches it, compares every installed SCHE item against the staged copy, and writes a JSON manifest of changes to `~/.claude/.library-staging/manifest.json`. The JSON also lists each `ref_bump` (source URL, old ref, new ref).
+
+**Assistant workflow for upgrade:**
+1. Run `upgrade` (phase 1). Parse the JSON it emits.
+2. For each item in `items`, read the file or directory at both `installed_path` and `staged_path`. Write a plain-English summary of what changed per item, grouped by item name. Do not paste raw diffs unless the user asks.
+3. List any `ref_bumps` so the user knows the manifest itself will move.
+4. Ask the user to confirm. On yes, run `upgrade --apply` (which copies staged files into place and bumps `ref = "..."` in the TOML).
+
+### upgrade-self
+
+```
+python3 scripts/library.py upgrade-self          # stage
+python3 scripts/library.py upgrade-self --apply  # apply
+```
+
+Same two-phase flow, but hardcoded to upgrade the `library` skill itself from its canonical origin (`https://github.com/DrCaveDev/library`). Phase 2 re-execs from the staged copy before overwriting the installed skill, so the running script isn't rewritten mid-run. If a `[[sources]]` entry pointing at the library's own repo exists in the user's manifest, its `ref` is bumped too.
+
+## Conventions
+
+SCHE roots (used by `discover` and `upgrade` to enumerate items, both inside source repos and under `install_path`):
+
+| Directory   | Layout |
+|-------------|--------|
+| `skills/`   | one subfolder per skill (contains `SKILL.md`) |
+| `commands/` | one file per slash command |
+| `hooks/`    | one file per hook |
+| `agents/`   | one file per subagent |
+| `prompts/`  | one file per prompt |
+
+Items are identified by their name (folder name for skills, filename including extension for the rest).
+
 ## When to use this skill
 
 - "install my library" / "install ~/foo.toml"
 - "add `skills/deploy` from acme/claude-pack@v1.2.0 to my library"
 - "validate my library file"
 - "what would my library install?"
+- "discover what's in my library" / "find any skills about <topic>"
+- "upgrade my library skills" / "upgrade the library skill itself"
 
 ## Notes
 
